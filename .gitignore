@@ -45,6 +45,8 @@ temp/
 # Presentation and report artifacts
 Lucrari practice.pdf
 docs/cloudpulse_lucrari_practice_report.md
+docs/cloudpulse_lucrari_practice_report.docx
+output/doc/cloudpulse_lucrari_practice_report.docx
 output/
 *.ppt
 *.pptx
