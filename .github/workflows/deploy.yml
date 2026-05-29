@@ -1,0 +1,143 @@
+name: Deploy to Google Cloud
+
+"on":
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  cloud-run:
+    name: Build, push and deploy to Cloud Run
+    runs-on: ubuntu-latest
+    env:
+      GCP_PROJECT_ID: ${{ vars.GCP_PROJECT_ID }}
+      GAR_LOCATION: ${{ vars.GAR_LOCATION }}
+      GAR_REPOSITORY: ${{ vars.GAR_REPOSITORY }}
+      CLOUD_RUN_REGION: ${{ vars.CLOUD_RUN_REGION }}
+      CLOUD_RUN_BACKEND_SERVICE: ${{ vars.CLOUD_RUN_BACKEND_SERVICE }}
+      CLOUD_RUN_FRONTEND_SERVICE: ${{ vars.CLOUD_RUN_FRONTEND_SERVICE }}
+      FRONTEND_API_BASE_URL: ${{ vars.FRONTEND_API_BASE_URL }}
+      CLOUD_RUN_CORS_ORIGINS: ${{ vars.CLOUD_RUN_CORS_ORIGINS }}
+      REDIS_QUEUE_NAME: ${{ vars.REDIS_QUEUE_NAME || 'monitor_checks' }}
+      IMAGE_TAG: ${{ github.sha }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate deployment configuration
+        env:
+          GCP_WORKLOAD_IDENTITY_PROVIDER: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          GCP_SERVICE_ACCOUNT: ${{ secrets.GCP_SERVICE_ACCOUNT }}
+          CLOUD_RUN_DATABASE_URL: ${{ secrets.CLOUD_RUN_DATABASE_URL }}
+          CLOUD_RUN_REDIS_URL: ${{ secrets.CLOUD_RUN_REDIS_URL }}
+        run: |
+          required_vars=(
+            GCP_PROJECT_ID
+            GAR_LOCATION
+            GAR_REPOSITORY
+            CLOUD_RUN_REGION
+            CLOUD_RUN_BACKEND_SERVICE
+            CLOUD_RUN_FRONTEND_SERVICE
+            FRONTEND_API_BASE_URL
+            CLOUD_RUN_CORS_ORIGINS
+          )
+
+          required_secrets=(
+            GCP_WORKLOAD_IDENTITY_PROVIDER
+            GCP_SERVICE_ACCOUNT
+            CLOUD_RUN_DATABASE_URL
+            CLOUD_RUN_REDIS_URL
+          )
+
+          missing=0
+          for name in "${required_vars[@]}"; do
+            if [ -z "${!name}" ]; then
+              echo "::error::GitHub variable $name is required."
+              missing=1
+            fi
+          done
+
+          for name in "${required_secrets[@]}"; do
+            if [ -z "${!name}" ]; then
+              echo "::error::GitHub secret $name is required."
+              missing=1
+            fi
+          done
+
+          exit "$missing"
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
+
+      - name: Set up gcloud
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Configure Docker for Artifact Registry
+        run: gcloud auth configure-docker "${GAR_LOCATION}-docker.pkg.dev" --quiet
+
+      - name: Prepare image names
+        run: |
+          gar_host="${GAR_LOCATION}-docker.pkg.dev"
+          backend_image_base="${gar_host}/${GCP_PROJECT_ID}/${GAR_REPOSITORY}/cloudpulse-backend"
+          frontend_image_base="${gar_host}/${GCP_PROJECT_ID}/${GAR_REPOSITORY}/cloudpulse-frontend"
+
+          echo "BACKEND_IMAGE_BASE=${backend_image_base}" >> "$GITHUB_ENV"
+          echo "FRONTEND_IMAGE_BASE=${frontend_image_base}" >> "$GITHUB_ENV"
+          echo "BACKEND_IMAGE_URI=${backend_image_base}:${IMAGE_TAG}" >> "$GITHUB_ENV"
+          echo "FRONTEND_IMAGE_URI=${frontend_image_base}:${IMAGE_TAG}" >> "$GITHUB_ENV"
+
+      - name: Build backend image
+        run: docker build -t "${BACKEND_IMAGE_URI}" ./backend
+
+      - name: Build frontend image
+        run: |
+          docker build \
+            --build-arg VITE_API_BASE_URL="${FRONTEND_API_BASE_URL}" \
+            -t "${FRONTEND_IMAGE_URI}" \
+            ./frontend
+
+      - name: Push backend image
+        run: |
+          docker tag "${BACKEND_IMAGE_URI}" "${BACKEND_IMAGE_BASE}:latest"
+          docker push "${BACKEND_IMAGE_URI}"
+          docker push "${BACKEND_IMAGE_BASE}:latest"
+
+      - name: Push frontend image
+        run: |
+          docker tag "${FRONTEND_IMAGE_URI}" "${FRONTEND_IMAGE_BASE}:latest"
+          docker push "${FRONTEND_IMAGE_URI}"
+          docker push "${FRONTEND_IMAGE_BASE}:latest"
+
+      - name: Deploy backend to Cloud Run
+        id: deploy-backend
+        uses: google-github-actions/deploy-cloudrun@v2
+        with:
+          service: ${{ env.CLOUD_RUN_BACKEND_SERVICE }}
+          region: ${{ env.CLOUD_RUN_REGION }}
+          image: ${{ env.BACKEND_IMAGE_URI }}
+          env_vars: |
+            ENVIRONMENT=cloud-run
+            DATABASE_URL=${{ secrets.CLOUD_RUN_DATABASE_URL }}
+            REDIS_URL=${{ secrets.CLOUD_RUN_REDIS_URL }}
+            REDIS_QUEUE_NAME=${{ env.REDIS_QUEUE_NAME }}
+            CORS_ORIGINS=${{ env.CLOUD_RUN_CORS_ORIGINS }}
+          flags: --allow-unauthenticated --port=8000
+
+      - name: Deploy frontend to Cloud Run
+        id: deploy-frontend
+        uses: google-github-actions/deploy-cloudrun@v2
+        with:
+          service: ${{ env.CLOUD_RUN_FRONTEND_SERVICE }}
+          region: ${{ env.CLOUD_RUN_REGION }}
+          image: ${{ env.FRONTEND_IMAGE_URI }}
+          flags: --allow-unauthenticated --port=80
+
+      - name: Show deployment URLs
+        run: |
+          echo "Backend URL: ${{ steps.deploy-backend.outputs.url }}"
+          echo "Frontend URL: ${{ steps.deploy-frontend.outputs.url }}"

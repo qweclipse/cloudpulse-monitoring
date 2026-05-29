@@ -1,0 +1,989 @@
+CloudPulse — план выполнения проекта
+Visual Website Monitoring Platform
+
+Общее описание проекта
+CloudPulse — это cloud-native платформа для мониторинга сайтов и API.
+Пользователь добавляет URL, система регулярно проверяет доступность сайта/API, измеряет latency, сохраняет историю проверок, создает incidents при падениях и показывает состояние через frontend dashboard.
+
+Основной стек:
+- Backend: Python FastAPI
+- Frontend: React + Vite
+- Database: PostgreSQL
+- Queue/cache: Redis
+- Worker: Python worker
+- Scheduler: Python scheduler
+- Containerization: Docker + Docker Compose
+- Orchestration: Kubernetes через Rancher Desktop
+- CI/CD: GitHub Actions
+- Cloud deployment: Google Cloud Run или GKE
+
+Общее обязательное требование по ведению журнала прогресса
+
+В проекте должен вестись отдельный файл прогресса, например:
+
+PROGRESS.md
+или
+PROJECT_LOG.txt
+
+В этом файле после каждого завершенного этапа нужно тезисно записывать, что именно было сделано.
+
+Пример формата:
+
+Этап 1 — Project skeleton
+- Создана структура monorepo.
+- Добавлены папки backend, frontend, k8s, .github/workflows.
+- Создан root README.md.
+- Добавлен .gitignore.
+- Описана базовая архитектура проекта.
+
+Этап 2 — Backend skeleton
+- Создано FastAPI-приложение.
+- Добавлен endpoint GET /health.
+- Создан requirements.txt.
+- Добавлены базовые файлы config.py, database.py, models.py, schemas.py.
+- Проверено, что backend запускается через uvicorn.
+
+Правило:
+После каждого этапа Codex должен обновлять PROGRESS.md / PROJECT_LOG.txt и кратко фиксировать:
+1. Что было создано.
+2. Какие файлы были изменены.
+3. Как проверить результат.
+4. Есть ли ограничения или незавершенные части.
+
+------------------------------------------------------------
+
+Этап 0 — Initial project structure
+
+Цель:
+Создать начальную структуру проекта CloudPulse.
+
+Что сделать:
+- Создать monorepo-структуру проекта.
+- Добавить основные директории:
+  - backend/
+  - frontend/
+  - k8s/
+  - .github/workflows/
+- Создать root README.md.
+- Создать .gitignore.
+- Создать placeholder README файлы внутри backend/ и frontend/.
+- Создать файл PROGRESS.md или PROJECT_LOG.txt.
+- В root README.md кратко описать:
+  - название проекта;
+  - цель проекта;
+  - основные сервисы;
+  - планируемую архитектуру.
+
+Ожидаемый результат:
+Проект имеет понятную структуру, но без бизнес-логики.
+
+Проверка:
+- В репозитории есть все основные директории.
+- Есть README.md.
+- Есть файл прогресса проекта.
+
+------------------------------------------------------------
+
+Этап 1 — Backend skeleton
+
+Цель:
+Создать базовое FastAPI-приложение.
+
+Что сделать:
+- В backend/ создать FastAPI-приложение.
+- Создать структуру:
+  - backend/app/main.py
+  - backend/app/config.py
+  - backend/app/database.py
+  - backend/app/models.py
+  - backend/app/schemas.py
+  - backend/app/routes/
+  - backend/app/services/
+- Добавить endpoint:
+  - GET /health
+- Endpoint должен возвращать:
+  {"status": "ok"}
+- Создать backend/requirements.txt.
+- Добавить инструкцию запуска в backend/README.md.
+
+Ожидаемый результат:
+Backend запускается локально через uvicorn.
+
+Проверка:
+Команды:
+cd backend
+uvicorn app.main:app --reload
+
+Проверить в браузере:
+http://localhost:8000/health
+
+------------------------------------------------------------
+
+Этап 2 — PostgreSQL support and database models
+
+Цель:
+Добавить подключение к PostgreSQL и создать основные модели данных.
+
+Что сделать:
+- Добавить SQLAlchemy.
+- Настроить подключение к PostgreSQL через переменную окружения DATABASE_URL.
+- Создать database session dependency.
+- Создать модели:
+
+Monitor:
+- id
+- name
+- url
+- interval_seconds
+- expected_status_code
+- timeout_seconds
+- is_active
+- current_status
+- last_checked_at
+- created_at
+- updated_at
+
+CheckResult:
+- id
+- monitor_id
+- status
+- status_code
+- latency_ms
+- error_message
+- checked_at
+
+Incident:
+- id
+- monitor_id
+- status
+- reason
+- started_at
+- resolved_at
+- duration_seconds
+
+Enums:
+- Monitor status: UNKNOWN, UP, DOWN
+- Check status: SUCCESS, FAILED
+- Incident status: OPEN, RESOLVED
+
+Ожидаемый результат:
+Backend содержит модели и подключение к базе, но API CRUD еще не реализован.
+
+Проверка:
+- Приложение импортируется без ошибок.
+- DATABASE_URL читается из environment variables.
+- Модели определены в app/models.py.
+
+------------------------------------------------------------
+
+Этап 3 — Alembic migrations
+
+Цель:
+Добавить миграции базы данных.
+
+Что сделать:
+- Инициализировать Alembic в backend/.
+- Настроить Alembic на использование DATABASE_URL.
+- Создать initial migration для таблиц:
+  - monitors
+  - check_results
+  - incidents
+- Обновить backend/README.md командами для миграций.
+
+Ожидаемый результат:
+Можно создать таблицы в PostgreSQL через Alembic.
+
+Проверка:
+Команды:
+cd backend
+alembic upgrade head
+
+------------------------------------------------------------
+
+Этап 4 — Monitor CRUD API
+
+Цель:
+Реализовать управление monitor’ами.
+
+Что сделать:
+Добавить endpoints:
+
+- GET /monitors
+- POST /monitors
+- GET /monitors/{monitor_id}
+- PUT /monitors/{monitor_id}
+- DELETE /monitors/{monitor_id}
+
+Требования:
+- Использовать Pydantic schemas.
+- Валидировать URL.
+- По умолчанию:
+  - current_status = UNKNOWN
+  - is_active = true
+- Возвращать 404, если monitor не найден.
+- Разнести код по routes/services/crud, чтобы main.py не был перегружен.
+
+Ожидаемый результат:
+Через Swagger можно создавать, смотреть, обновлять и удалять monitors.
+
+Проверка:
+Открыть:
+http://localhost:8000/docs
+
+Проверить:
+- создание monitor;
+- получение списка;
+- получение по id;
+- обновление;
+- удаление.
+
+------------------------------------------------------------
+
+Этап 5 — Website checking logic
+
+Цель:
+Добавить основную логику проверки сайтов/API.
+
+Что сделать:
+- Создать app/services/checker.py.
+- Реализовать функцию:
+  check_monitor(db, monitor_id) -> CheckResult
+
+Логика:
+- Загрузить monitor из базы.
+- Выполнить HTTP GET на monitor.url.
+- Измерить latency в миллисекундах.
+- Сравнить status_code с expected_status_code.
+- Создать CheckResult.
+- Обновить Monitor:
+  - current_status
+  - last_checked_at
+- Если check успешен:
+  - Monitor.current_status = UP
+  - CheckResult.status = SUCCESS
+- Если check неуспешен:
+  - Monitor.current_status = DOWN
+  - CheckResult.status = FAILED
+- Обрабатывать:
+  - timeout;
+  - connection errors;
+  - invalid URLs;
+  - unexpected status code.
+- Использовать httpx.
+
+Ожидаемый результат:
+В backend есть функция, которая реально проверяет доступность URL и сохраняет результат.
+
+Проверка:
+Пока можно проверить через временный вызов функции или через следующий этап с manual endpoint.
+
+------------------------------------------------------------
+
+Этап 6 — Manual check endpoint
+
+Цель:
+Добавить ручной запуск проверки monitor’а.
+
+Что сделать:
+Добавить endpoint:
+- POST /monitors/{monitor_id}/check
+
+Логика:
+- Endpoint вызывает check_monitor(db, monitor_id).
+- Возвращает созданный CheckResult.
+- Возвращает 404, если monitor не найден.
+
+Ожидаемый результат:
+Пользователь может вручную запустить проверку сайта/API через Swagger или frontend.
+
+Проверка:
+- Создать monitor.
+- Вызвать POST /monitors/{id}/check.
+- Проверить, что создан CheckResult.
+- Проверить, что current_status обновился.
+
+------------------------------------------------------------
+
+Этап 7 — Incident management logic
+
+Цель:
+Добавить систему инцидентов.
+
+Что сделать:
+- Создать app/services/incident_service.py.
+- Реализовать правила:
+
+Если check failed:
+- Если у monitor нет OPEN incident, создать новый OPEN incident.
+- Если OPEN incident уже есть, не создавать дубликат.
+
+Если check success:
+- Если у monitor есть OPEN incident, закрыть его.
+- Установить:
+  - status = RESOLVED
+  - resolved_at
+  - duration_seconds
+
+Также:
+- Сохранять понятную причину падения в поле reason.
+- Вызвать incident logic из check_monitor.
+
+Ожидаемый результат:
+При падении сайта создается incident, при восстановлении incident закрывается.
+
+Проверка:
+- Добавить неправильный URL.
+- Запустить check.
+- Проверить, что создан OPEN incident.
+- Исправить URL или создать working monitor.
+- Проверить закрытие incident после успешного check.
+
+------------------------------------------------------------
+
+Этап 8 — Checks, incidents and stats API
+
+Цель:
+Добавить endpoints для истории проверок, инцидентов и статистики.
+
+Что сделать:
+Добавить endpoints:
+
+- GET /monitors/{monitor_id}/checks
+- GET /monitors/{monitor_id}/incidents
+- GET /incidents
+- GET /stats
+
+GET /stats должен возвращать:
+- total_monitors
+- up_monitors
+- down_monitors
+- unknown_monitors
+- active_incidents
+- average_latency_ms
+
+Ожидаемый результат:
+Frontend сможет получать данные для dashboard, страницы деталей и страницы incidents.
+
+Проверка:
+- Создать несколько monitors.
+- Запустить checks.
+- Проверить /stats.
+- Проверить историю checks.
+- Проверить список incidents.
+
+------------------------------------------------------------
+
+Этап 9 — Docker support for backend and PostgreSQL
+
+Цель:
+Контейнеризировать backend и базу данных.
+
+Что сделать:
+- Создать backend/Dockerfile.
+- Создать docker-compose.yml.
+- Добавить services:
+  - api
+  - postgres
+- Настроить environment variables.
+- Пробросить порт backend:
+  - 8000:8000
+- Добавить healthcheck, где это уместно.
+- Обновить README.md командами запуска.
+
+Ожидаемый результат:
+Backend и PostgreSQL запускаются через Docker Compose.
+
+Проверка:
+Команда:
+docker compose up --build
+
+Проверить:
+http://localhost:8000/health
+http://localhost:8000/docs
+
+------------------------------------------------------------
+
+Этап 10 — Redis queue support
+
+Цель:
+Добавить Redis как очередь задач.
+
+Что сделать:
+- Добавить redis service в docker-compose.yml.
+- Добавить Python redis dependency.
+- Создать app/services/queue.py.
+- Реализовать функции:
+  - enqueue_monitor_check(monitor_id)
+  - dequeue_monitor_check()
+- Использовать простой Redis list queue.
+- Не использовать Celery на этом этапе.
+
+Ожидаемый результат:
+Backend умеет добавлять задачи проверки monitor’ов в Redis queue.
+
+Проверка:
+- Redis запускается через Docker Compose.
+- queue.py подключается к Redis.
+- Можно положить и забрать задачу из очереди.
+
+------------------------------------------------------------
+
+Этап 11 — Worker service
+
+Цель:
+Добавить отдельный worker-контейнер для выполнения checks.
+
+Что сделать:
+- Создать app/worker.py.
+- Worker должен:
+  - подключаться к Redis;
+  - подключаться к PostgreSQL;
+  - ждать задачи из очереди;
+  - брать monitor_id;
+  - вызывать check_monitor(db, monitor_id);
+  - логировать успешные и неуспешные задачи;
+  - не падать полностью при ошибке одной задачи.
+- Обновить docker-compose.yml:
+  - добавить worker service;
+  - использовать тот же backend image;
+  - command: python -m app.worker.
+
+Ожидаемый результат:
+Проверки могут выполняться асинхронно через worker.
+
+Проверка:
+- Запустить docker compose.
+- Положить задачу в Redis.
+- Убедиться, что worker обработал задачу.
+- Проверить, что появился CheckResult.
+
+------------------------------------------------------------
+
+Этап 12 — Scheduler service
+
+Цель:
+Добавить сервис, который автоматически планирует проверки.
+
+Что сделать:
+- Создать app/scheduler.py.
+- Scheduler должен каждые 10 секунд:
+  - находить active monitors;
+  - проверять, пора ли их запускать;
+  - если last_checked_at = null, добавить задачу;
+  - если now - last_checked_at >= interval_seconds, добавить задачу;
+  - отправить задачу в Redis queue.
+- По возможности избегать дубликатов задач.
+- Логировать действия scheduler’а.
+- Обновить docker-compose.yml:
+  - добавить scheduler service;
+  - использовать тот же backend image;
+  - command: python -m app.scheduler.
+
+Ожидаемый результат:
+Система автоматически проверяет сайты/API без ручного запуска.
+
+Проверка:
+- Создать active monitor.
+- Подождать interval_seconds.
+- Проверить, что появляются новые CheckResult.
+- Проверить логи scheduler и worker.
+
+------------------------------------------------------------
+
+Этап 13 — Frontend skeleton
+
+Цель:
+Создать React + Vite frontend.
+
+Что сделать:
+- Создать frontend на React + Vite.
+- Добавить базовый routing.
+- Создать страницы:
+  - Dashboard
+  - AddMonitor
+  - MonitorDetails
+  - Incidents
+- Создать layout с навигацией.
+- Создать API client module для запросов к backend.
+- Добавить простой CSS.
+- Не добавлять пока charts.
+
+Ожидаемый результат:
+Frontend запускается и имеет базовую навигацию.
+
+Проверка:
+Команды:
+cd frontend
+npm install
+npm run dev
+
+Открыть frontend в браузере.
+
+------------------------------------------------------------
+
+Этап 14 — Dashboard page
+
+Цель:
+Реализовать главную страницу мониторинга.
+
+Что сделать:
+Dashboard должен:
+- Вызывать GET /stats.
+- Вызывать GET /monitors.
+- Показывать stat cards:
+  - Total monitors
+  - UP
+  - DOWN
+  - UNKNOWN
+  - Active incidents
+  - Average latency
+- Показывать таблицу monitors:
+  - Name
+  - URL
+  - Status
+  - Last checked
+  - Latency
+  - Actions
+
+Actions:
+- View details
+- Run manual check
+- Enable / Disable
+- Delete
+
+Ожидаемый результат:
+Пользователь видит общее состояние системы и список monitor’ов.
+
+Проверка:
+- Backend запущен.
+- Frontend показывает данные.
+- Кнопка manual check работает.
+- Delete работает.
+- Status обновляется после check.
+
+------------------------------------------------------------
+
+Этап 15 — Add Monitor page
+
+Цель:
+Добавить форму создания monitor’а.
+
+Что сделать:
+Форма должна содержать:
+- name
+- url
+- interval_seconds
+- expected_status_code
+- timeout_seconds
+- is_active
+
+Требования:
+- Frontend validation для обязательных полей.
+- Отправка данных в POST /monitors.
+- Success/error messages.
+- Redirect на Dashboard после успешного создания.
+
+Ожидаемый результат:
+Пользователь может создать новый monitor через UI.
+
+Проверка:
+- Создать monitor через форму.
+- Проверить, что он появился на Dashboard.
+- Проверить, что он есть в backend API.
+
+------------------------------------------------------------
+
+Этап 16 — Monitor Details page
+
+Цель:
+Добавить страницу деталей monitor’а.
+
+Что сделать:
+Страница должна:
+- Получать monitor по id.
+- Получать recent checks.
+- Получать incidents по этому monitor.
+- Показывать:
+  - current status;
+  - URL;
+  - expected status code;
+  - interval;
+  - timeout;
+  - last checked;
+  - uptime percentage, если реализовано.
+- Добавить кнопку Run manual check.
+- Показать таблицу recent checks.
+- Показать таблицу incidents.
+
+Ожидаемый результат:
+Пользователь может открыть конкретный monitor и увидеть его историю.
+
+Проверка:
+- Открыть details из Dashboard.
+- Запустить manual check.
+- Проверить обновление recent checks.
+- Проверить отображение incidents.
+
+------------------------------------------------------------
+
+Этап 17 — Incidents page
+
+Цель:
+Добавить отдельную страницу всех incidents.
+
+Что сделать:
+Страница должна:
+- Вызывать GET /incidents.
+- Показывать таблицу:
+  - Monitor
+  - Status
+  - Started at
+  - Resolved at
+  - Duration
+  - Reason
+- Добавить фильтр:
+  - ALL
+  - OPEN
+  - RESOLVED
+
+Ожидаемый результат:
+Пользователь может видеть все проблемы мониторимых сайтов/API.
+
+Проверка:
+- Создать incident через failed check.
+- Открыть Incidents page.
+- Проверить фильтры.
+
+------------------------------------------------------------
+
+Этап 18 — Frontend Docker support
+
+Цель:
+Контейнеризировать frontend.
+
+Что сделать:
+- Создать frontend/Dockerfile.
+- Собирать React app.
+- Раздавать собранный frontend через nginx.
+- Добавить frontend service в docker-compose.yml.
+- Пробросить порт frontend:
+  - 3000 или 8080.
+- Настроить frontend на обращение к backend API:
+  - через environment variable;
+  - или через nginx proxy.
+
+Ожидаемый результат:
+Frontend запускается через Docker Compose вместе со всем проектом.
+
+Проверка:
+Команда:
+docker compose up --build
+
+Открыть frontend:
+http://localhost:3000
+или
+http://localhost:8080
+
+------------------------------------------------------------
+
+Этап 19 — Full Docker Compose integration
+
+Цель:
+Собрать весь проект в единую docker-compose архитектуру.
+
+Что сделать:
+docker-compose.yml должен содержать:
+- frontend
+- api
+- postgres
+- redis
+- worker
+- scheduler
+
+Требования:
+- Все сервисы должны быть связаны между собой.
+- Environment variables должны быть вынесены корректно.
+- API должен подключаться к postgres и redis.
+- Worker и scheduler должны использовать тот же backend image.
+- README должен содержать полную инструкцию запуска.
+
+Ожидаемый результат:
+Весь проект запускается одной командой.
+
+Проверка:
+Команда:
+docker compose up --build
+
+Проверить:
+- frontend доступен;
+- api доступен;
+- можно добавить monitor;
+- scheduler создает задачи;
+- worker выполняет checks;
+- incidents создаются и закрываются.
+
+------------------------------------------------------------
+
+Этап 20 — Kubernetes manifests for PostgreSQL and Redis
+
+Цель:
+Создать Kubernetes-манифесты для инфраструктурных сервисов.
+
+Что сделать:
+Создать файлы:
+- k8s/postgres-deployment.yaml
+- k8s/postgres-service.yaml
+- k8s/redis-deployment.yaml
+- k8s/redis-service.yaml
+- k8s/configmap.yaml
+- k8s/secret.yaml
+
+Требования:
+- PostgreSQL и Redis должны быть доступны внутри cluster через ClusterIP.
+- Использовать ConfigMap для обычных настроек.
+- Использовать Secret для паролей.
+- Добавить reasonable resource requests и limits.
+
+Ожидаемый результат:
+PostgreSQL и Redis запускаются в локальном Kubernetes.
+
+Проверка:
+Команды:
+kubectl apply -f k8s/
+kubectl get pods
+kubectl get services
+
+------------------------------------------------------------
+
+Этап 21 — Kubernetes manifests for API, worker and scheduler
+
+Цель:
+Создать Kubernetes-манифесты для backend-сервисов.
+
+Что сделать:
+Создать файлы:
+- k8s/api-deployment.yaml
+- k8s/api-service.yaml
+- k8s/worker-deployment.yaml
+- k8s/scheduler-deployment.yaml
+
+Требования:
+- API должен слушать port 8000.
+- Worker и scheduler должны использовать backend image, но разные commands.
+- Environment variables должны браться из ConfigMap и Secret.
+- Добавить liveness/readiness probes для API через /health.
+
+Ожидаемый результат:
+Backend API, worker и scheduler работают в Kubernetes.
+
+Проверка:
+Команды:
+kubectl get pods
+kubectl logs deployment/api
+kubectl logs deployment/worker
+kubectl logs deployment/scheduler
+
+Проброс API:
+kubectl port-forward service/api-service 8000:8000
+
+Проверить:
+http://localhost:8000/health
+
+------------------------------------------------------------
+
+Этап 22 — Kubernetes manifests for frontend
+
+Цель:
+Создать Kubernetes-манифесты для frontend.
+
+Что сделать:
+Создать файлы:
+- k8s/frontend-deployment.yaml
+- k8s/frontend-service.yaml
+
+Требования:
+- Frontend должен быть доступен через Kubernetes service.
+- Добавить liveness/readiness probes.
+- Настроить обращение frontend к API.
+- Обновить README командами запуска и port-forward.
+
+Ожидаемый результат:
+Frontend работает в Kubernetes и может обращаться к API.
+
+Проверка:
+Команды:
+kubectl apply -f k8s/
+kubectl get pods
+kubectl get services
+kubectl port-forward service/frontend-service 3000:80
+
+Открыть:
+http://localhost:3000
+
+------------------------------------------------------------
+
+Этап 23 — GitHub Actions CI workflow
+
+Цель:
+Добавить CI pipeline.
+
+Что сделать:
+Создать workflow:
+.github/workflows/ci.yml
+
+Workflow должен:
+- Запускаться на push и pull request.
+- Для backend:
+  - установить зависимости;
+  - проверить импорт приложения;
+  - запустить тесты, если они есть.
+- Для frontend:
+  - npm install;
+  - npm run build.
+- Собрать Docker images:
+  - backend image;
+  - frontend image.
+
+Ожидаемый результат:
+При push/PR GitHub Actions проверяет проект.
+
+Проверка:
+- Сделать push в GitHub.
+- Проверить, что workflow прошел успешно.
+
+------------------------------------------------------------
+
+Этап 24 — Optional cloud deployment workflow
+
+Цель:
+Подготовить CI/CD деплой в Google Cloud.
+
+Что сделать:
+Создать workflow:
+.github/workflows/deploy.yml
+
+Workflow должен:
+- Build backend Docker image.
+- Build frontend Docker image.
+- Push images to Google Artifact Registry.
+- Подготовить deployment step для:
+  - Google Cloud Run;
+  или
+  - GKE.
+- Использовать GitHub Secrets.
+- Не хардкодить credentials.
+- Документировать required secrets в README.
+
+Ожидаемый результат:
+Проект готов к автоматическому deployment через GitHub Actions.
+
+Проверка:
+- Workflow виден в GitHub Actions.
+- Secrets описаны в README.
+- Нет hardcoded credentials.
+
+------------------------------------------------------------
+
+Этап 25 — Backend tests
+
+Цель:
+Добавить базовые тесты backend.
+
+Что сделать:
+- Добавить pytest.
+- Добавить тесты:
+  - GET /health
+  - создание monitor
+  - validation monitor URL
+  - получение списка monitors
+  - checker behavior with mocked HTTP responses
+- Обновить README командами тестирования.
+
+Ожидаемый результат:
+Backend имеет базовое тестовое покрытие.
+
+Проверка:
+Команда:
+cd backend
+pytest
+
+------------------------------------------------------------
+
+Этап 26 — Final README and project polish
+
+Цель:
+Подготовить проект к сдаче.
+
+Что сделать:
+Обновить root README.md.
+
+README должен содержать:
+- Project description.
+- Architecture overview.
+- Text architecture diagram.
+- Services list.
+- Main features.
+- Local run with Docker Compose.
+- Kubernetes run with Rancher Desktop.
+- API endpoints.
+- CI/CD description.
+- Screenshots placeholders.
+- Known limitations.
+- Future improvements.
+
+Также:
+- Проверить, что PROGRESS.md / PROJECT_LOG.txt заполнен.
+- Проверить, что команды запуска актуальны.
+- Проверить, что нет секретов в репозитории.
+- Проверить, что docker-compose работает.
+- Проверить, что Kubernetes manifests применяются.
+
+Ожидаемый результат:
+Проект готов к демонстрации и защите.
+
+Проверка:
+- docker compose up --build работает.
+- frontend доступен.
+- api доступен.
+- Kubernetes deployment работает локально.
+- README понятно объясняет проект.
+- PROGRESS.md описывает выполненные этапы.
+
+------------------------------------------------------------
+
+Рекомендуемый порядок выполнения
+
+1. Initial project structure
+2. Backend skeleton
+3. PostgreSQL support and models
+4. Alembic migrations
+5. Monitor CRUD API
+6. Website checking logic
+7. Manual check endpoint
+8. Incident management
+9. Checks/incidents/stats API
+10. Docker support for backend and PostgreSQL
+11. Redis queue support
+12. Worker service
+13. Scheduler service
+14. Frontend skeleton
+15. Dashboard page
+16. Add Monitor page
+17. Monitor Details page
+18. Incidents page
+19. Frontend Docker support
+20. Full Docker Compose integration
+21. Kubernetes manifests for PostgreSQL and Redis
+22. Kubernetes manifests for API, worker and scheduler
+23. Kubernetes manifests for frontend
+24. GitHub Actions CI
+25. Optional Google Cloud deployment workflow
+26. Backend tests
+27. Final README and polish
+
+Важно:
+Не начинать с Kubernetes и CI/CD.
+Сначала нужно добиться стабильной работы проекта локально.
+Затем собрать через Docker Compose.
+После этого переносить в Kubernetes.
+Только потом добавлять CI/CD и cloud deployment.
