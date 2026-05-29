@@ -8,6 +8,7 @@ from app.services import queries
 router = APIRouter(prefix="/incidents", tags=["incidents"])
 
 
+# Общий список инцидентов с опциональным фильтром OPEN/RESOLVED.
 @router.get("", response_model=list[schemas.IncidentRead])
 def list_incidents(
     status: models.IncidentStatus | None = Query(default=None),

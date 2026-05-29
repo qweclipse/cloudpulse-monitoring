@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session, selectinload
 from app import models
 
 
+# Read-only запросы для страниц dashboard/details/incidents.
 def list_monitor_checks(
     db: Session,
     monitor_id: int,
@@ -57,6 +58,7 @@ def list_incidents(
 
 
 def get_stats(db: Session) -> dict[str, int | float | None]:
+    # Считает сводные показатели для верхней панели dashboard.
     total_monitors = _count_monitors(db)
     up_monitors = _count_monitors(db, models.MonitorStatus.UP)
     down_monitors = _count_monitors(db, models.MonitorStatus.DOWN)
@@ -87,6 +89,7 @@ def get_stats(db: Session) -> dict[str, int | float | None]:
 def _count_monitors(
     db: Session, status: models.MonitorStatus | None = None
 ) -> int:
+    # Универсальный счетчик: всех мониторов или только с выбранным статусом.
     statement = select(func.count()).select_from(models.Monitor)
     if status is not None:
         statement = statement.where(models.Monitor.current_status == status)

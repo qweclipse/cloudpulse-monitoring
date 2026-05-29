@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 from app import models, schemas
 
 
+# Базовые операции с Monitor вынесены отдельно от FastAPI-роутов.
 def list_monitors(db: Session, skip: int = 0, limit: int = 100) -> list[models.Monitor]:
     statement = (
         select(models.Monitor)
@@ -21,6 +22,7 @@ def get_monitor(db: Session, monitor_id: int) -> models.Monitor | None:
 def create_monitor(
     db: Session, monitor_in: schemas.MonitorCreate
 ) -> models.Monitor:
+    # Pydantic URL приводим к строке перед сохранением в БД.
     monitor_data = monitor_in.model_dump()
     monitor_data["url"] = str(monitor_in.url)
 
@@ -39,6 +41,7 @@ def update_monitor(
     monitor: models.Monitor,
     monitor_in: schemas.MonitorUpdate,
 ) -> models.Monitor:
+    # exclude_unset позволяет обновлять только переданные поля.
     update_data = monitor_in.model_dump(exclude_unset=True)
     if "url" in update_data and monitor_in.url is not None:
         update_data["url"] = str(monitor_in.url)

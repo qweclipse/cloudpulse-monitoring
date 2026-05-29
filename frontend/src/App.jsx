@@ -7,6 +7,7 @@ import Incidents from "./pages/Incidents.jsx";
 import MonitorDetails from "./pages/MonitorDetails.jsx";
 
 export default function App() {
+  // Главная карта маршрутов: все страницы работают внутри общего layout.
   return (
     <Routes>
       <Route element={<AppLayout />}>

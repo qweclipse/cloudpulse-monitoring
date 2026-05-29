@@ -23,6 +23,7 @@ logger = logging.getLogger("cloudpulse.scheduler")
 
 
 def is_monitor_due(monitor: models.Monitor, now: datetime | None = None) -> bool:
+    # Новый монитор проверяется сразу, остальные - по interval_seconds.
     current_time = now or datetime.now(timezone.utc)
 
     if monitor.last_checked_at is None:
@@ -37,6 +38,7 @@ def get_due_monitors(
     db: Session,
     now: datetime | None = None,
 ) -> list[models.Monitor]:
+    # Сначала берем активные мониторы, потом фильтруем их по расписанию.
     statement = (
         select(models.Monitor)
         .where(models.Monitor.is_active.is_(True))
@@ -51,6 +53,7 @@ def schedule_due_checks(
     redis_client=None,
     now: datetime | None = None,
 ) -> int:
+    # Кладет due-мониторы в Redis, избегая повторов в очереди.
     due_monitors = get_due_monitors(db, now=now)
     enqueued_count = 0
 
@@ -67,6 +70,7 @@ def schedule_due_checks(
 
 
 def run_scheduler() -> None:
+    # Бесконечный цикл для отдельного Railway/Docker/K8s процесса scheduler.
     logger.info(
         "Starting scheduler with poll_interval=%ss queue=%s",
         settings.scheduler_poll_interval_seconds,

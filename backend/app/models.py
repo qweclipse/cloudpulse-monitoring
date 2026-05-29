@@ -8,22 +8,26 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.database import Base
 
 
+# Статус монитора показывает последнее известное состояние ресурса.
 class MonitorStatus(str, Enum):
     UNKNOWN = "UNKNOWN"
     UP = "UP"
     DOWN = "DOWN"
 
 
+# Результат отдельной HTTP-проверки.
 class CheckStatus(str, Enum):
     SUCCESS = "SUCCESS"
     FAILED = "FAILED"
 
 
+# Статус инцидента: открыт при сбое, закрыт после восстановления.
 class IncidentStatus(str, Enum):
     OPEN = "OPEN"
     RESOLVED = "RESOLVED"
 
 
+# Основная сущность: сайт или API, который нужно проверять.
 class Monitor(Base):
     __tablename__ = "monitors"
 
@@ -54,6 +58,7 @@ class Monitor(Base):
         onupdate=func.now(),
     )
 
+    # При удалении монитора удаляем связанные проверки и инциденты.
     check_results: Mapped[list["CheckResult"]] = relationship(
         back_populates="monitor", cascade="all, delete-orphan"
     )
@@ -62,6 +67,7 @@ class Monitor(Base):
     )
 
 
+# История одной проверки монитора: код ответа, задержка и ошибка.
 class CheckResult(Base):
     __tablename__ = "check_results"
 
@@ -82,6 +88,7 @@ class CheckResult(Base):
     monitor: Mapped[Monitor] = relationship(back_populates="check_results")
 
 
+# Инцидент группирует период недоступности монитора.
 class Incident(Base):
     __tablename__ = "incidents"
 

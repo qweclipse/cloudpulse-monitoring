@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 from app import models
 
 
+# Ищет последний открытый инцидент, чтобы не создавать дубликаты.
 def get_open_incident(db: Session, monitor_id: int) -> models.Incident | None:
     statement = (
         select(models.Incident)
@@ -24,6 +25,7 @@ def handle_check_result(
     monitor: models.Monitor,
     check_result: models.CheckResult,
 ) -> models.Incident | None:
+    # FAILED открывает инцидент, SUCCESS закрывает активный инцидент.
     if check_result.status == models.CheckStatus.FAILED:
         return _open_incident_if_needed(db, monitor, check_result)
 
@@ -38,6 +40,7 @@ def _open_incident_if_needed(
     monitor: models.Monitor,
     check_result: models.CheckResult,
 ) -> models.Incident:
+    # Если инцидент уже открыт, оставляем его активным.
     open_incident = get_open_incident(db, monitor.id)
     if open_incident is not None:
         return open_incident
@@ -57,6 +60,7 @@ def _resolve_incident_if_needed(
     monitor: models.Monitor,
     check_result: models.CheckResult,
 ) -> models.Incident | None:
+    # Время простоя считаем от начала инцидента до успешной проверки.
     open_incident = get_open_incident(db, monitor.id)
     if open_incident is None:
         return None

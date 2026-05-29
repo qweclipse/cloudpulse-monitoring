@@ -4,6 +4,7 @@ from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
+# Преобразует CORS_ORIGINS из Railway/.env в список доменов для FastAPI.
 def parse_cors_origins(value: str) -> list[str]:
     raw_value = value.strip()
     if not raw_value:
@@ -31,6 +32,7 @@ def parse_cors_origins(value: str) -> list[str]:
 
 
 class Settings(BaseSettings):
+    # Все runtime-настройки приложения читаются из env или .env.
     app_name: str = "CloudPulse API"
     environment: str = "local"
     database_url: str = (
@@ -51,9 +53,11 @@ class Settings(BaseSettings):
     @field_validator("database_url", mode="before")
     @classmethod
     def normalize_database_url(cls, value: str) -> str:
+        # Railway выдает postgresql://, а SQLAlchemy здесь использует драйвер psycopg.
         if isinstance(value, str) and value.startswith("postgresql://"):
             return value.replace("postgresql://", "postgresql+psycopg://", 1)
         return value
 
 
+# Единый объект настроек импортируется всеми слоями приложения.
 settings = Settings()

@@ -8,6 +8,7 @@ from app.services import checker, crud, queries
 router = APIRouter(prefix="/monitors", tags=["monitors"])
 
 
+# CRUD endpoints для управления наблюдаемыми сайтами/API.
 @router.get("", response_model=list[schemas.MonitorRead])
 def list_monitors(
     skip: int = Query(default=0, ge=0),
@@ -17,6 +18,7 @@ def list_monitors(
     return crud.list_monitors(db, skip=skip, limit=limit)
 
 
+# Создает монитор, который затем может проверяться вручную или scheduler-ом.
 @router.post(
     "",
     response_model=schemas.MonitorRead,
@@ -34,6 +36,7 @@ def get_monitor(
     monitor_id: int,
     db: Session = Depends(get_db),
 ) -> schemas.MonitorRead:
+    # Явно возвращаем 404, чтобы frontend мог показать понятную ошибку.
     monitor = crud.get_monitor(db, monitor_id)
     if monitor is None:
         raise HTTPException(
@@ -43,6 +46,7 @@ def get_monitor(
     return monitor
 
 
+# Ручной запуск проверки из UI без ожидания scheduler-а.
 @router.post("/{monitor_id}/check", response_model=schemas.CheckResultRead)
 def run_monitor_check(
     monitor_id: int,
@@ -57,6 +61,7 @@ def run_monitor_check(
         ) from exc
 
 
+# История проверок нужна для details-страницы и расчета uptime.
 @router.get("/{monitor_id}/checks", response_model=list[schemas.CheckResultRead])
 def list_monitor_checks(
     monitor_id: int,
@@ -73,6 +78,7 @@ def list_monitor_checks(
     return queries.list_monitor_checks(db, monitor_id, skip=skip, limit=limit)
 
 
+# Инциденты конкретного монитора показывают периоды недоступности.
 @router.get("/{monitor_id}/incidents", response_model=list[schemas.IncidentRead])
 def list_monitor_incidents(
     monitor_id: int,

@@ -16,6 +16,7 @@ logger = logging.getLogger("cloudpulse.worker")
 
 
 def process_monitor_check(monitor_id: int) -> None:
+    # Обрабатывает одну задачу из очереди и фиксирует результат в БД.
     with SessionLocal() as db:
         try:
             result = check_monitor(db, monitor_id)
@@ -34,6 +35,7 @@ def process_monitor_check(monitor_id: int) -> None:
 
 
 def run_worker() -> None:
+    # Бесконечный цикл фонового worker-а: ждет id монитора из Redis.
     logger.info(
         "Starting worker with redis_url=%s queue=%s",
         settings.redis_url,

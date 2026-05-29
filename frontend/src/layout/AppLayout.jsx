@@ -1,5 +1,6 @@
 import { NavLink, Outlet } from "react-router-dom";
 
+// Пункты бокового меню, которые показываются на всех страницах.
 const navItems = [
   { to: "/", label: "Dashboard", end: true },
   { to: "/monitors/new", label: "Add Monitor" },
@@ -7,6 +8,7 @@ const navItems = [
 ];
 
 export default function AppLayout() {
+  // Outlet подставляет текущую страницу внутри общей оболочки.
   return (
     <div className="app-shell">
       <aside className="sidebar">

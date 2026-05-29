@@ -19,6 +19,7 @@ export default function MonitorDetails() {
   const [message, setMessage] = useState("");
 
   const loadDetails = useCallback(async () => {
+    // Details-страница собирает монитор, проверки и инциденты одним экраном.
     setIsLoading(true);
     setError("");
 
@@ -48,6 +49,7 @@ export default function MonitorDetails() {
   const uptimePercentage = useMemo(() => calculateUptime(checks), [checks]);
 
   async function handleRunCheck() {
+    // Ручная проверка сразу обновляет историю и статус монитора.
     setIsChecking(true);
     setError("");
     setMessage("");
@@ -245,6 +247,7 @@ export default function MonitorDetails() {
 }
 
 function calculateUptime(checks) {
+  // Uptime считается по загруженной истории последних проверок.
   if (checks.length === 0) {
     return "-";
   }

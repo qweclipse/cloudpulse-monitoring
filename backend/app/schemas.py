@@ -5,6 +5,7 @@ from pydantic import AnyHttpUrl, BaseModel, ConfigDict, Field
 from app.models import CheckStatus, IncidentStatus, MonitorStatus
 
 
+# Общие поля монитора с валидацией входных данных.
 class MonitorBase(BaseModel):
     name: str = Field(min_length=1, max_length=255)
     url: AnyHttpUrl
@@ -14,10 +15,12 @@ class MonitorBase(BaseModel):
     is_active: bool = True
 
 
+# Payload для создания нового монитора.
 class MonitorCreate(MonitorBase):
     pass
 
 
+# Payload для частичного обновления монитора.
 class MonitorUpdate(BaseModel):
     name: str | None = Field(default=None, min_length=1, max_length=255)
     url: AnyHttpUrl | None = None
@@ -27,6 +30,7 @@ class MonitorUpdate(BaseModel):
     is_active: bool | None = None
 
 
+# Ответ API с полной информацией о мониторе.
 class MonitorRead(BaseModel):
     id: int
     name: str
@@ -43,6 +47,7 @@ class MonitorRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
+# Ответ API с результатом одной проверки.
 class CheckResultRead(BaseModel):
     id: int
     monitor_id: int
@@ -55,6 +60,7 @@ class CheckResultRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
+# Короткая версия монитора для вложения в инциденты.
 class MonitorSummary(BaseModel):
     id: int
     name: str
@@ -64,6 +70,7 @@ class MonitorSummary(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
+# Ответ API с данными инцидента и связанным монитором.
 class IncidentRead(BaseModel):
     id: int
     monitor_id: int
@@ -77,6 +84,7 @@ class IncidentRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
+# Данные для верхних карточек dashboard.
 class StatsRead(BaseModel):
     total_monitors: int
     up_monitors: int

@@ -3,6 +3,7 @@ from redis import Redis
 from app.config import settings
 
 
+# Создает Redis-клиент для общей очереди задач проверки.
 def get_redis_client() -> Redis:
     return Redis.from_url(settings.redis_url, decode_responses=True)
 
@@ -12,6 +13,7 @@ def enqueue_monitor_check(
     client: Redis | None = None,
     skip_if_queued: bool = False,
 ) -> int:
+    # В очередь кладем только id монитора, сам worker читает данные из БД.
     redis_client = client or get_redis_client()
 
     if skip_if_queued and is_monitor_check_queued(monitor_id, client=redis_client):
@@ -25,6 +27,7 @@ def dequeue_monitor_check(
     block: bool = False,
     timeout_seconds: int = 5,
 ) -> int | None:
+    # block=True используется worker-ом, чтобы ждать задачу без активного polling-а.
     redis_client = client or get_redis_client()
     raw_monitor_id = None
 
@@ -45,6 +48,7 @@ def dequeue_monitor_check(
 
 
 def is_monitor_check_queued(monitor_id: int, client: Redis | None = None) -> bool:
+    # Scheduler проверяет это, чтобы не поставить одну проверку несколько раз.
     redis_client = client or get_redis_client()
     expected_value = str(monitor_id)
     queued_values = redis_client.lrange(settings.redis_queue_name, 0, -1)

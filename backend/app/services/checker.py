@@ -9,6 +9,7 @@ from app.services import incident_service
 
 
 class MonitorNotFoundError(Exception):
+    # Доменная ошибка, которую API превращает в HTTP 404.
     def __init__(self, monitor_id: int) -> None:
         super().__init__(f"Monitor {monitor_id} not found")
         self.monitor_id = monitor_id
@@ -19,6 +20,7 @@ def check_monitor(
     monitor_id: int,
     client: httpx.Client | None = None,
 ) -> models.CheckResult:
+    # Выполняет HTTP-запрос, сохраняет результат и обновляет статус монитора.
     monitor = db.get(models.Monitor, monitor_id)
     if monitor is None:
         raise MonitorNotFoundError(monitor_id)
@@ -32,6 +34,7 @@ def check_monitor(
     http_client = client or httpx.Client(follow_redirects=True)
 
     try:
+        # Ожидаемый код ответа считается успешной проверкой.
         response = http_client.get(
             monitor.url,
             timeout=monitor.timeout_seconds,
@@ -65,6 +68,7 @@ def check_monitor(
         if owns_client:
             http_client.close()
 
+    # Задержка считается даже для ошибок, чтобы видеть время до сбоя.
     latency_ms = max(round((perf_counter() - request_started_at) * 1000), 0)
 
     check_result = models.CheckResult(
@@ -80,6 +84,7 @@ def check_monitor(
 
     db.add(monitor)
     db.add(check_result)
+    # На основе результата открываем или закрываем инцидент.
     incident_service.handle_check_result(db, monitor, check_result)
     db.commit()
     db.refresh(monitor)

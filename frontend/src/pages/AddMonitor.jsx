@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 
 import { createMonitor } from "../api/client.js";
 
+// Значения формы по умолчанию для нового монитора.
 const INITIAL_FORM = {
   name: "",
   url: "",
@@ -20,6 +21,7 @@ export default function AddMonitor() {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   function handleChange(event) {
+    // Универсально обновляет и текстовые поля, и checkbox.
     const { checked, name, type, value } = event.target;
     setForm((currentForm) => ({
       ...currentForm,
@@ -162,6 +164,7 @@ export default function AddMonitor() {
 }
 
 function validateForm(form) {
+  // Клиентская валидация дает быстрый feedback до отправки на API.
   const requiredFields = [];
 
   if (!form.name.trim()) {

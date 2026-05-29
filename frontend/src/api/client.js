@@ -1,5 +1,6 @@
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8000";
 
+// Общая обертка над fetch: добавляет JSON-заголовки и единый разбор ошибок.
 async function request(path, options = {}) {
   const response = await fetch(`${API_BASE_URL}${path}`, {
     headers: {
@@ -22,6 +23,7 @@ async function request(path, options = {}) {
 }
 
 async function readError(response) {
+  // FastAPI обычно возвращает detail, но fallback нужен для любых HTTP-ошибок.
   try {
     const data = await response.json();
     return data.detail ?? response.statusText;

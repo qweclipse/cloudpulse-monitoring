@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 
 import { getIncidents } from "../api/client.js";
 
+// Фильтры совпадают со статусами инцидентов на backend.
 const FILTERS = ["ALL", "OPEN", "RESOLVED"];
 
 export default function Incidents() {
@@ -12,6 +13,7 @@ export default function Incidents() {
   const [error, setError] = useState("");
 
   const loadIncidents = useCallback(async () => {
+    // При смене фильтра перезагружаем список инцидентов.
     setIsLoading(true);
     setError("");
 
@@ -106,6 +108,7 @@ export default function Incidents() {
 }
 
 function renderMonitor(incident) {
+  // Если backend не вернул вложенный monitor, показываем fallback по id.
   if (!incident.monitor) {
     return `Monitor #${incident.monitor_id}`;
   }
