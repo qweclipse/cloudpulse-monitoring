@@ -148,7 +148,7 @@ export default function Dashboard() {
           <table>
             <thead>
               <tr>
-                <th>Name</th>
+                <th>SurName</th>
                 <th>URL</th>
                 <th>Status</th>
                 <th>Last checked</th>
