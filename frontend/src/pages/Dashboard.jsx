@@ -11,7 +11,6 @@ import {
 } from "../api/client.js";
 
 const EMPTY_STATS = {
-  // Начальные значения показываются до ответа API.
   total_monitors: 0,
   up_monitors: 0,
   down_monitors: 0,
@@ -32,7 +31,6 @@ export default function Dashboard() {
   const [busyAction, setBusyAction] = useState("");
 
   const loadDashboard = useCallback(async () => {
-    // Dashboard грузит сводку и список мониторов параллельно.
     setIsLoading(true);
     setError("");
 
@@ -66,7 +64,6 @@ export default function Dashboard() {
   }, [location.pathname, location.state, navigate]);
 
   const statItems = useMemo(
-    // Формируем данные для карточек отдельно от JSX-разметки.
     () => [
       { label: "Total monitors", value: stats.total_monitors },
       { label: "UP", value: stats.up_monitors },
@@ -106,7 +103,6 @@ export default function Dashboard() {
   }
 
   async function runAction(actionId, action) {
-    // Единая обработка loading/error для кнопок в таблице.
     setBusyAction(actionId);
     setError("");
     setMessage("");
@@ -132,6 +128,9 @@ export default function Dashboard() {
         </button>
       </header>
 
+      <div className="alert alert-success">
+        Demo text for Railway deployment check. Remove this line.
+      </div>
 
       {error ? <div className="alert alert-error">{error}</div> : null}
       {message ? <div className="alert alert-success">{message}</div> : null}
@@ -240,7 +239,6 @@ export default function Dashboard() {
 }
 
 async function loadLatestChecks(monitors) {
-  // Для каждой строки таблицы достаем последнюю проверку монитора.
   const checkEntries = await Promise.all(
     monitors.map(async (monitor) => {
       try {
