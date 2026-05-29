@@ -128,9 +128,7 @@ export default function Dashboard() {
         </button>
       </header>
 
-      <div className="alert alert-success">
-        Demo text for Railway deployment check. Remove this line.
-      </div>
+
 
       {error ? <div className="alert alert-error">{error}</div> : null}
       {message ? <div className="alert alert-success">{message}</div> : null}
