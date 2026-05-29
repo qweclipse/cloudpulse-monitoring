@@ -112,6 +112,8 @@ Variables:
 VITE_API_BASE_URL=https://YOUR_API_DOMAIN
 ```
 
+Include the `https://` prefix in `VITE_API_BASE_URL`.
+
 After the frontend gets a Railway domain, update API `CORS_ORIGINS` with the
 frontend domain and redeploy the API service.
 
